@@ -197,20 +197,28 @@ export const FlashcardDeck = ({
         ));
       }
       
-      // Get the updated list of cards to review (after removing this one)
+      // Calculate remaining cards AFTER marking this one as reviewed
+      const updatedReviewedIds = new Set(reviewedCardIds);
+      updatedReviewedIds.add(currentCard.id);
+      
       const remainingCards = hardCards.filter(card => 
-        !reviewedCardIds.has(card.id) && card.id !== currentCard.id
+        !updatedReviewedIds.has(card.id)
       );
       
       // Check if this was the last card to review
       if (remainingCards.length === 0) {
         // No more cards to review, show scoreboard
-        setShowScoreboard(true);
         setIsFlipped(false);
+        
+        // Use setTimeout to ensure state updates have completed
+        setTimeout(() => {
+          setShowScoreboard(true);
+        }, 50);
       } else {
-        // Move to next card or reset index if needed
+        // Still have cards to review
+        // Adjust current index if needed
         if (currentIndex >= remainingCards.length) {
-          setCurrentIndex(0);
+          setCurrentIndex(Math.max(0, remainingCards.length - 1));
         }
         setIsFlipped(false);
       }
@@ -251,31 +259,70 @@ export const FlashcardDeck = ({
 
   // Save study session to localStorage
   const saveStudySession = () => {
-    const easy = cards.filter(card => card.difficulty === 'easy').length;
-    const medium = cards.filter(card => card.difficulty === 'medium').length;
-    const hard = cards.filter(card => card.difficulty === 'hard').length;
-    const cardsReviewed = easy + medium + hard;
-    
-    if (cardsReviewed === 0) return; // Don't save empty sessions
-    
-    const session = {
-      date: new Date().toISOString(),
-      cardsReviewed,
-      performance: { easy, medium, hard },
-      category: categoryName || 'General',
-    };
-    
-    // Load existing sessions
-    const savedSessions = localStorage.getItem('flashcards-study-sessions');
-    let sessions = [];
-    
-    if (savedSessions) {
-      sessions = JSON.parse(savedSessions);
+    // For review mode, use the review results
+    if (isReviewingHard) {
+      const cardsReviewed = reviewResults.easy + reviewResults.medium + reviewResults.hard;
+      
+      if (cardsReviewed === 0) return; // Don't save empty sessions
+      
+      const session = {
+        date: new Date().toISOString(),
+        cardsReviewed,
+        performance: { 
+          easy: reviewResults.easy, 
+          medium: reviewResults.medium, 
+          hard: reviewResults.hard 
+        },
+        category: categoryName || 'General',
+      };
+      
+      // Load existing sessions
+      try {
+        const savedSessions = localStorage.getItem('flashcards-study-sessions');
+        let sessions = [];
+        
+        if (savedSessions) {
+          sessions = JSON.parse(savedSessions);
+        }
+        
+        // Add new session and save
+        sessions.push(session);
+        localStorage.setItem('flashcards-study-sessions', JSON.stringify(sessions));
+      } catch (error) {
+        console.error("Error saving study session:", error);
+      }
+    } else {
+      // For normal mode, use the overall progress
+      const easy = cards.filter(card => card.difficulty === 'easy').length;
+      const medium = cards.filter(card => card.difficulty === 'medium').length;
+      const hard = cards.filter(card => card.difficulty === 'hard').length;
+      const cardsReviewed = easy + medium + hard;
+      
+      if (cardsReviewed === 0) return; // Don't save empty sessions
+      
+      const session = {
+        date: new Date().toISOString(),
+        cardsReviewed,
+        performance: { easy, medium, hard },
+        category: categoryName || 'General',
+      };
+      
+      // Load existing sessions
+      try {
+        const savedSessions = localStorage.getItem('flashcards-study-sessions');
+        let sessions = [];
+        
+        if (savedSessions) {
+          sessions = JSON.parse(savedSessions);
+        }
+        
+        // Add new session and save
+        sessions.push(session);
+        localStorage.setItem('flashcards-study-sessions', JSON.stringify(sessions));
+      } catch (error) {
+        console.error("Error saving study session:", error);
+      }
     }
-    
-    // Add new session and save
-    sessions.push(session);
-    localStorage.setItem('flashcards-study-sessions', JSON.stringify(sessions));
   };
 
   // Modified handleRestart to save session
