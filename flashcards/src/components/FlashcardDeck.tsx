@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Flashcard } from './Flashcard';
-import { Flashcard as FlashcardType } from '../data/flashcards';
 import { StudyStats } from './StudyStats';
 import { 
   SRSCard, 
@@ -12,7 +11,7 @@ import {
 } from '../utils/spacedRepetition';
 
 interface FlashcardDeckProps {
-  cards: FlashcardType[];
+  cards: SRSCard[];
   darkMode?: boolean;
   categoryId?: string;
 }
@@ -41,6 +40,10 @@ export const FlashcardDeck = ({
   const [showStats, setShowStats] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [useSRS, setUseSRS] = useState(true);
+  const [hardCardsForReview, setHardCardsForReview] = useState<SRSCard[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
 
   // Get category name from URL
   useEffect(() => {
@@ -245,16 +248,22 @@ export const FlashcardDeck = ({
     }
   };
 
-  const handleToggleFavorite = () => {
-    if (currentCards.length === 0) return;
+  const handleToggleFavorite = (card?: SRSCard) => {
+    // If a card is provided (from review mode), use it
+    if (card) {
+      setCards(prevCards => prevCards.map(c => 
+        c.id === card.id ? { ...c, favorite: !c.favorite } : c
+      ));
+      return;
+    }
     
-    setCards(prevCards => {
-      return prevCards.map(card => 
-        card.id === currentCards[currentIndex].id 
-          ? { ...card, favorite: !card.favorite } 
-          : card
-      );
-    });
+    // Original logic for when no card is provided
+    if (currentCards.length === 0 || currentIndex >= currentCards.length) return;
+    
+    const currentCard = currentCards[currentIndex];
+    setCards(prevCards => prevCards.map(card => 
+      card.id === currentCard.id ? { ...card, favorite: !card.favorite } : card
+    ));
   };
 
   // Save study session to localStorage
@@ -397,14 +406,8 @@ export const FlashcardDeck = ({
 
   // Handle starting hard cards review
   const handleStartHardReview = () => {
-    setIsReviewingHard(true);
+    handleReviewHardCards();
     setShowReviewPrompt(false);
-    setCurrentIndex(0);
-    setIsFlipped(false);
-    setReviewedCardIds(new Set());
-    setReviewResults({ easy: 0, medium: 0, hard: 0 });
-    setSearchQuery('');
-    setFilterType('all');
   };
 
   // Calculate progress
@@ -417,59 +420,273 @@ export const FlashcardDeck = ({
     favorites: cards.filter(card => card.favorite).length,
   };
 
-  // Show scoreboard
-  if (showScoreboard) {
-    // Use inline effect to avoid eslint warnings about dependencies
-    useEffect(() => {
-      // Only save session once when scoreboard is shown
-      const saveOnce = () => {
+  // Review mode logic
+  const handleReviewHardCards = () => {
+    // Get all hard cards
+    const hardCardsToReview = cards.filter(card => card.difficulty === 'hard');
+    
+    if (hardCardsToReview.length === 0) {
+      setToastMessage("No hard cards to review!");
+      setToastVisible(true);
+      return;
+    }
+    
+    // Reset review state
+    setReviewResults({ easy: 0, medium: 0, hard: 0 });
+    setReviewedCardIds(new Set());
+    
+    // Set hard cards for review and start review mode
+    setHardCardsForReview(hardCardsToReview);
+    setReviewIndex(0);
+    setIsReviewingHard(true);
+    setIsFlipped(false);
+  };
+  
+  // Completely rewritten difficulty selection handler for review mode
+  const handleReviewDifficultySelect = (difficulty: 'easy' | 'medium' | 'hard') => {
+    if (!isReviewingHard || hardCardsForReview.length === 0) return;
+    
+    // Get current card being reviewed
+    const currentCard = hardCardsForReview[reviewIndex];
+    
+    // Update review results
+    setReviewResults(prev => ({
+      ...prev,
+      [difficulty]: prev[difficulty] + 1
+    }));
+    
+    // Mark this card as reviewed
+    setReviewedCardIds(prev => {
+      const newSet = new Set(prev);
+      if (currentCard && currentCard.id) {
+        newSet.add(currentCard.id);
+      }
+      return newSet;
+    });
+    
+    // Update card using SRS if enabled
+    if (useSRS) {
+      setCards(prevCards => prevCards.map(card => 
+        (card.id === currentCard?.id) 
+          ? calculateNextReview(card, difficulty) 
+          : card
+      ));
+    } else {
+      // Traditional update without SRS
+      setCards(prevCards => prevCards.map(card => 
+        (card.id === currentCard?.id)
+          ? { ...card, difficulty } 
+          : card
+      ));
+    }
+    
+    // Move to next card or finish review
+    const nextIndex = reviewIndex + 1;
+    
+    if (nextIndex >= hardCardsForReview.length) {
+      // Review is complete, show scoreboard
+      setIsFlipped(false);
+      setShowScoreboard(true);
+    } else {
+      // Move to next card
+      setReviewIndex(nextIndex);
+      setIsFlipped(false);
+    }
+  };
+  
+  // Function to retry reviewing hard cards after a review
+  const handleRetryHardCards = () => {
+    // Get updated hard cards (including ones that might have changed during this review)
+    const updatedHardCards = cards.filter(card => card.difficulty === 'hard');
+    
+    if (updatedHardCards.length === 0) {
+      setToastMessage("Great job! No more hard cards to review!");
+      setToastVisible(true);
+      setShowScoreboard(false);
+      setIsReviewingHard(false);
+      return;
+    }
+    
+    // Reset review state but keep in review mode
+    setReviewResults({ easy: 0, medium: 0, hard: 0 });
+    setReviewedCardIds(new Set());
+    setShowScoreboard(false);
+    
+    // Set new hard cards for review and reset index
+    setHardCardsForReview(updatedHardCards);
+    setReviewIndex(0);
+    setIsFlipped(false);
+  };
+  
+  // Function to exit review mode
+  const handleExitReview = () => {
+    setIsReviewingHard(false);
+    setShowScoreboard(false);
+    setReviewedCardIds(new Set());
+    setReviewIndex(0);
+    setHardCardsForReview([]);
+  };
+
+  // Add the Toast notification component at the end of the component
+  useEffect(() => {
+    if (toastVisible) {
+      const timer = setTimeout(() => {
+        setToastVisible(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastVisible]);
+
+  // If we're in review mode
+  if (isReviewingHard) {
+    if (showScoreboard) {
+      // Save study session when scoreboard is shown
+      useEffect(() => {
         try {
-          saveStudySession();
+          const cardsReviewed = reviewResults.easy + reviewResults.medium + reviewResults.hard;
+          
+          if (cardsReviewed === 0) return; // Don't save empty sessions
+          
+          const session = {
+            date: new Date().toISOString(),
+            cardsReviewed,
+            performance: { 
+              easy: reviewResults.easy, 
+              medium: reviewResults.medium, 
+              hard: reviewResults.hard 
+            },
+            category: categoryName || 'General',
+          };
+          
+          // Load existing sessions
+          const savedSessions = localStorage.getItem('flashcards-study-sessions');
+          let sessions = [];
+          
+          if (savedSessions) {
+            sessions = JSON.parse(savedSessions);
+          }
+          
+          // Add new session and save
+          sessions.push(session);
+          localStorage.setItem('flashcards-study-sessions', JSON.stringify(sessions));
         } catch (error) {
           console.error("Error saving study session:", error);
         }
-      };
-      saveOnce();
-      // Empty dependency array to run only once
-    }, []);
-
-    return (
-      <div className="flex flex-col items-center gap-6 sm:gap-8 p-4 md:p-8">
-        <div className={`w-full max-w-md ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-6 rounded-xl shadow-sm text-center`}>
-          <p className="text-xl sm:text-2xl font-bold">Review Complete! 🎉</p>
-          <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
-            <p className="text-lg">Your Review Results:</p>
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
-              <div className={`${darkMode ? 'bg-green-900' : 'bg-green-100'} p-3 md:p-4 rounded-lg`}>
-                <p className={`${darkMode ? 'text-green-300' : 'text-green-800'} text-sm md:text-base font-semibold`}>Easy</p>
-                <p className="text-xl md:text-2xl">{reviewResults.easy}</p>
+      }, []);
+      
+      return (
+        <div className="flex flex-col items-center gap-6 sm:gap-8 p-4 md:p-8">
+          <div className={`w-full max-w-md ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-6 rounded-xl shadow-sm text-center`}>
+            <p className="text-xl sm:text-2xl font-bold">Review Complete! 🎉</p>
+            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+              <p className="text-lg">Your Review Results:</p>
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className={`${darkMode ? 'bg-green-900' : 'bg-green-100'} p-3 md:p-4 rounded-lg`}>
+                  <p className={`${darkMode ? 'text-green-300' : 'text-green-800'} text-sm md:text-base font-semibold`}>Easy</p>
+                  <p className="text-xl md:text-2xl">{reviewResults.easy}</p>
+                </div>
+                <div className={`${darkMode ? 'bg-yellow-900' : 'bg-yellow-100'} p-3 md:p-4 rounded-lg`}>
+                  <p className={`${darkMode ? 'text-yellow-300' : 'text-yellow-800'} text-sm md:text-base font-semibold`}>Medium</p>
+                  <p className="text-xl md:text-2xl">{reviewResults.medium}</p>
+                </div>
+                <div className={`${darkMode ? 'bg-red-900' : 'bg-red-100'} p-3 md:p-4 rounded-lg`}>
+                  <p className={`${darkMode ? 'text-red-300' : 'text-red-800'} text-sm md:text-base font-semibold`}>Hard</p>
+                  <p className="text-xl md:text-2xl">{reviewResults.hard}</p>
+                </div>
               </div>
-              <div className={`${darkMode ? 'bg-yellow-900' : 'bg-yellow-100'} p-3 md:p-4 rounded-lg`}>
-                <p className={`${darkMode ? 'text-yellow-300' : 'text-yellow-800'} text-sm md:text-base font-semibold`}>Medium</p>
-                <p className="text-xl md:text-2xl">{reviewResults.medium}</p>
-              </div>
-              <div className={`${darkMode ? 'bg-red-900' : 'bg-red-100'} p-3 md:p-4 rounded-lg`}>
-                <p className={`${darkMode ? 'text-red-300' : 'text-red-800'} text-sm md:text-base font-semibold`}>Hard</p>
-                <p className="text-xl md:text-2xl">{reviewResults.hard}</p>
-              </div>
+              <p className="text-base md:text-lg mt-2 sm:mt-4">
+                You improved {reviewResults.easy + reviewResults.medium} out of {reviewResults.easy + reviewResults.medium + reviewResults.hard} cards!
+              </p>
+              
+              {/* Message about hard cards remaining */}
+              {cards.filter(card => card.difficulty === 'hard').length > 0 && (
+                <div className={`mt-4 p-3 ${darkMode ? 'bg-yellow-800 text-yellow-100' : 'bg-yellow-50 text-yellow-800'} rounded-lg`}>
+                  <p>You still have {cards.filter(card => card.difficulty === 'hard').length} cards marked as hard.</p>
+                  <p className="mt-1">Would you like to review them again?</p>
+                </div>
+              )}
             </div>
-            <p className="text-base md:text-lg mt-2 sm:mt-4">
-              You improved {reviewResults.easy + reviewResults.medium} out of {reviewResults.easy + reviewResults.medium + reviewResults.hard} cards!
-            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <button
+              onClick={handleRetryHardCards}
+              className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            >
+              Review Hard Cards Again
+            </button>
+            <button
+              onClick={handleExitReview}
+              className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            >
+              Exit Review
+            </button>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      );
+    }
+    
+    // No cards to review or invalid index
+    if (hardCardsForReview.length === 0 || reviewIndex >= hardCardsForReview.length) {
+      return (
+        <div className="flex flex-col items-center justify-center p-4 md:p-8 text-center">
+          <div className={`p-6 rounded-xl ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'} shadow-sm max-w-md`}>
+            <p className="text-xl">No hard cards to review!</p>
+            <button
+              onClick={handleExitReview}
+              className={`mt-4 px-6 py-2 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200`}
+            >
+              Return to Deck
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Show the current card being reviewed
+    const currentReviewCard = hardCardsForReview[reviewIndex];
+    
+    return (
+      <div className="flex flex-col items-center gap-6 p-4 md:p-8 max-w-xl mx-auto">
+        {/* Progress information */}
+        <div className="w-full flex justify-between items-center text-sm mb-2">
+          <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+            Reviewing Hard Cards: {reviewIndex + 1} / {hardCardsForReview.length}
+          </span>
           <button
-            onClick={handleRestart}
-            className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            onClick={handleExitReview}
+            className={`text-sm ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-600'}`}
           >
-            Start New Session
+            Exit Review
           </button>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-blue-500"
+            style={{ width: `${((reviewIndex + 1) / hardCardsForReview.length) * 100}%` }}
+          />
+        </div>
+        
+        {/* Flashcard */}
+        <Flashcard
+          front={currentReviewCard.front}
+          back={currentReviewCard.back}
+          flipped={isFlipped}
+          onFlip={() => setIsFlipped(prev => !prev)}
+          onDifficulty={handleReviewDifficultySelect}
+          isFavorite={currentReviewCard.favorite}
+          onToggleFavorite={() => handleToggleFavorite(currentReviewCard)}
+          darkMode={darkMode}
+        />
+        
+        {/* Navigation buttons */}
+        <div className="w-full flex justify-center mt-4">
           <button
-            onClick={() => setShowScoreboard(false)}
-            className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            onClick={() => setIsFlipped(true)}
+            className={`px-6 py-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} rounded-lg transition-colors duration-200 font-medium shadow-sm`}
           >
-            Continue Browsing
+            {isFlipped ? 'Already Flipped' : 'Flip Card'}
           </button>
         </div>
       </div>
@@ -541,6 +758,13 @@ export const FlashcardDeck = ({
       </div>
     );
   }
+
+  // Toast notification
+  {toastVisible && (
+    <div className="fixed top-4 right-4 left-4 mx-auto max-w-sm p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50 text-center">
+      {toastMessage}
+    </div>
+  )}
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-8 p-4 sm:p-8">

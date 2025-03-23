@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FlashcardDeck } from './components/FlashcardDeck';
 import { WelcomePage } from './components/WelcomePage';
-import { flashcardSets, FlashcardSet } from './data/flashcards';
+import { flashcardSets, FlashcardSet, Flashcard } from './data/flashcards';
+import { SRSCard } from './utils/spacedRepetition';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -45,6 +46,17 @@ function App() {
     setDarkMode(prev => !prev);
   };
 
+  // Convert flashcards to SRSCard format
+  const convertToSRSCards = (cards: Flashcard[]): SRSCard[] => {
+    return cards.map((card, index) => ({
+      id: index + 1,
+      front: card.front,
+      back: card.back,
+      difficulty: undefined,
+      favorite: false
+    }));
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-b from-gray-50 to-gray-100'}`}>
       <header className={`${darkMode ? 'bg-gray-800 shadow-gray-900' : 'bg-white shadow-sm'} transition-colors duration-200`}>
@@ -84,7 +96,7 @@ function App() {
       <main className={`max-w-7xl mx-auto py-12 ${darkMode ? 'text-white' : ''}`}>
         {selectedCategory && currentSet ? (
           <FlashcardDeck 
-            cards={currentSet.cards} 
+            cards={convertToSRSCards(currentSet.cards)} 
             darkMode={darkMode}
             categoryId={selectedCategory}
           />
