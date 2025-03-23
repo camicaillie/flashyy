@@ -1,3 +1,4 @@
+// Updated history flashcards with Czech content
 export interface Flashcard {
   front: string;
   back: string;
