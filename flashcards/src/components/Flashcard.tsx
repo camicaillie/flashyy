@@ -1,119 +1,136 @@
-// import React from 'react';
+import { useState, useEffect } from 'react';
 
 interface FlashcardProps {
   front: string;
   back: string;
-  onDifficultySelect: (difficulty: 'easy' | 'medium' | 'hard') => void;
-  isFlipped: boolean;
+  flipped: boolean;
   onFlip: () => void;
+  onDifficulty?: (difficulty: 'easy' | 'medium' | 'hard') => void;
   isFavorite?: boolean;
-  onToggleFavorite: () => void;
+  onToggleFavorite?: () => void;
   darkMode?: boolean;
 }
 
-export const Flashcard = ({ 
-  front, 
-  back, 
-  onDifficultySelect, 
-  isFlipped, 
+export const Flashcard = ({
+  front,
+  back,
+  flipped,
   onFlip,
+  onDifficulty,
   isFavorite = false,
   onToggleFavorite,
   darkMode = false
 }: FlashcardProps) => {
-  // Safety check to prevent errors with undefined content
+  const [isFlipped, setIsFlipped] = useState(flipped);
+  
+  // Update the flip state when the parent component changes it
+  useEffect(() => {
+    setIsFlipped(flipped);
+  }, [flipped]);
+
+  const handleClick = () => {
+    onFlip();
+  };
+  
+  // Safety checks for content
   const safeContent = {
-    front: typeof front === 'string' ? front : 'Card content not available',
-    back: typeof back === 'string' ? back : 'Card content not available'
+    front: front || 'No content provided',
+    back: back || 'No content provided'
   };
 
   return (
-    <div className="relative">
-      <div
-        className="relative w-96 h-56 cursor-pointer"
-        onClick={!isFlipped ? onFlip : undefined}
+    <div className="w-full">
+      <div 
+        className={`flip-card w-full ${isFlipped ? 'flipped' : ''} cursor-pointer`}
+        onClick={handleClick}
+        style={{ height: '280px' }}
       >
-        <div
-          className={`absolute w-full h-full transition-transform duration-500 ${
-            isFlipped ? 'rotate-y-180' : ''
-          } transform-style-preserve-3d`}
-        >
-          {/* Front of card */}
-          <div className={`absolute w-full h-full ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 backface-hidden flex items-center justify-center`}>
-            <p className={`text-xl text-center font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{safeContent.front}</p>
+        <div className="flip-card-inner">
+          <div 
+            className={`flip-card-front rounded-xl shadow-lg p-4 sm:p-6 ${
+              darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
+            } relative`}
+          >
+            <div className="card-content text-center overflow-auto max-h-[240px]">
+              <p className="text-lg sm:text-xl whitespace-pre-wrap break-words">{safeContent.front}</p>
+            </div>
             
             {/* Favorite button (front) */}
-            <button 
-              className="absolute top-3 right-3"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite();
-              }}
-            >
-              {isFavorite ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${darkMode ? 'text-gray-400 hover:text-yellow-400' : 'text-gray-400 hover:text-yellow-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              )}
-            </button>
+            {onToggleFavorite && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite();
+                }}
+                className="absolute top-2 right-2 text-yellow-500 hover:text-yellow-300"
+                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                {isFavorite ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
-          
-          {/* Back of card */}
-          <div className={`absolute w-full h-full ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 backface-hidden rotate-y-180 flex flex-col`}>
-            <p className={`text-lg text-center font-medium mb-auto ${darkMode ? 'text-white' : 'text-gray-800'}`}>{safeContent.back}</p>
+          <div 
+            className={`flip-card-back rounded-xl shadow-lg p-4 sm:p-6 ${
+              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-800'
+            } relative`}
+          >
+            <div className="card-content text-center overflow-auto max-h-[240px]">
+              <p className="text-lg sm:text-xl whitespace-pre-wrap break-words">{safeContent.back}</p>
+            </div>
             
             {/* Favorite button (back) */}
-            <button 
-              className="absolute top-3 right-3"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite();
-              }}
-            >
-              {isFavorite ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${darkMode ? 'text-gray-400 hover:text-yellow-400' : 'text-gray-400 hover:text-yellow-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              )}
-            </button>
+            {onToggleFavorite && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite();
+                }}
+                className="absolute top-2 right-2 text-yellow-500 hover:text-yellow-300"
+                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                {isFavorite ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Difficulty buttons - only show when card is flipped */}
-      {isFlipped && (
-        <div className="mt-6 flex justify-center gap-4">
+      {isFlipped && onDifficulty && (
+        <div className="mt-4 sm:mt-6 flex justify-center gap-2 sm:gap-4">
           <button
-            onClick={() => {
-              onDifficultySelect('hard');
-            }}
-            className={`px-6 py-2 ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            onClick={() => onDifficulty('easy')}
+            className="px-3 py-1 sm:px-4 sm:py-2 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm sm:text-base transition-colors duration-200"
           >
-            Hard
+            Easy
           </button>
           <button
-            onClick={() => {
-              onDifficultySelect('medium');
-            }}
-            className={`px-6 py-2 ${darkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            onClick={() => onDifficulty('medium')}
+            className="px-3 py-1 sm:px-4 sm:py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md text-sm sm:text-base transition-colors duration-200"
           >
             Medium
           </button>
           <button
-            onClick={() => {
-              onDifficultySelect('easy');
-            }}
-            className={`px-6 py-2 ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+            onClick={() => onDifficulty('hard')}
+            className="px-3 py-1 sm:px-4 sm:py-2 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm sm:text-base transition-colors duration-200"
           >
-            Easy
+            Hard
           </button>
         </div>
       )}

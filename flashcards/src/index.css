@@ -2,16 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base styles */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
   min-height: 100vh;
-  background-color: #f3f4f6;
+}
+
+/* Card flip animation */
+.flip-card {
+  perspective: 1000px;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .flip-card {
+    min-height: 250px; /* Ensure minimum height on mobile */
+  }
+  
+  /* Improve form controls spacing on mobile */
+  .form-control {
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Ensure buttons are easier to tap */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve text readability on smaller screens */
+  .card-content {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+  
+  /* Adjust spacing for mobile viewports */
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 
 /* Custom classes for 3D flip animation */
