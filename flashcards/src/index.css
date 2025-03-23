@@ -24,14 +24,16 @@ body {
 
 /* Card flip animation */
 .flip-card {
-  perspective: 1000px;
+  perspective: 2000px;
+  width: 100%;
+  height: 100%;
 }
 
 .flip-card-inner {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
@@ -49,40 +51,78 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: box-shadow 0.3s ease;
+}
+
+.flip-card-front:hover,
+.flip-card-back:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 .flip-card-back {
   transform: rotateY(180deg);
 }
 
+/* Card content styles */
+.card-content {
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.card-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .flip-card {
-    min-height: 250px; /* Ensure minimum height on mobile */
+    min-height: 300px;
   }
   
-  /* Improve form controls spacing on mobile */
-  .form-control {
-    margin-bottom: 0.75rem;
+  .card-content {
+    padding: 0.75rem;
   }
   
-  /* Ensure buttons are easier to tap */
   button {
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+  .flip-card {
+    min-height: 400px;
+  }
   
-  /* Improve text readability on smaller screens */
   .card-content {
-    font-size: 1rem;
-    padding: 0.5rem;
+    padding: 2rem;
   }
-  
-  /* Adjust spacing for mobile viewports */
-  .container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
+}
+
+/* Dark mode scrollbar */
+.dark .card-content {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .card-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Custom classes for 3D flip animation */

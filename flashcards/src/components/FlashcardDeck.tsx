@@ -168,19 +168,15 @@ export const FlashcardDeck = ({
     if (isReviewingHard) {
       // Review mode
       const currentCard = currentCards[currentIndex];
+      if (!currentCard) return; // Safety check
       
-      // Update review results
+      // Update review results and mark card as reviewed in a single batch
+      const updatedReviewedIds = new Set([...reviewedCardIds, currentCard.id]);
+      setReviewedCardIds(updatedReviewedIds);
       setReviewResults(prev => ({
         ...prev,
         [difficulty]: prev[difficulty] + 1
       }));
-      
-      // Mark this card as reviewed
-      setReviewedCardIds(prev => {
-        const newSet = new Set(prev);
-        newSet.add(currentCard.id);
-        return newSet;
-      });
       
       // Update card using SRS if enabled
       if (useSRS) {
@@ -198,8 +194,7 @@ export const FlashcardDeck = ({
         ));
       }
       
-      // Calculate remaining cards AFTER marking this one as reviewed
-      const updatedReviewedIds = new Set([...reviewedCardIds, currentCard.id]);
+      // Calculate remaining cards
       const remainingCards = hardCards.filter(card => !updatedReviewedIds.has(card.id));
       
       // Check if this was the last card to review
@@ -630,34 +625,34 @@ export const FlashcardDeck = ({
   )}
 
   return (
-    <div className="flex flex-col items-center gap-3 sm:gap-4 p-2 sm:p-4 md:p-8">
+    <div className="flex flex-col items-center gap-4 p-4 md:p-8 w-full max-w-4xl mx-auto">
       {/* Mode indicator and Stats button row */}
-      <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between items-center">
+      <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 justify-between items-center">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {isReviewingHard ? (
-            <div className={`text-sm sm:text-base font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-2 sm:px-4 py-1 rounded-full`}>
+            <div className={`text-sm sm:text-base font-medium ${darkMode ? 'text-red-300 bg-red-900' : 'text-red-600 bg-red-50'} px-4 py-1.5 rounded-full`}>
               Reviewing Hard Cards ({currentCards.length})
             </div>
           ) : useSRS && filterType === 'due' ? (
-            <div className={`text-sm sm:text-base font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-2 sm:px-4 py-1 rounded-full`}>
+            <div className={`text-sm sm:text-base font-medium ${darkMode ? 'text-blue-300 bg-blue-900' : 'text-blue-600 bg-blue-50'} px-4 py-1.5 rounded-full`}>
               Due Cards: {dueCards.length}
             </div>
           ) : null}
           
           {/* SRS Toggle */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            <span className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SRS</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SRS</span>
             <button
               onClick={() => setUseSRS(prev => !prev)}
-              className={`relative inline-flex h-4 sm:h-6 w-8 sm:w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 useSRS 
                   ? darkMode ? 'bg-blue-600' : 'bg-blue-500'
                   : darkMode ? 'bg-gray-700' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-3 sm:h-4 w-3 sm:w-4 transform rounded-full bg-white transition-transform ${
-                  useSRS ? 'translate-x-4 sm:translate-x-6' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  useSRS ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
@@ -666,26 +661,26 @@ export const FlashcardDeck = ({
       </div>
 
       {/* Search and filter controls */}
-      <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-2 sm:gap-4">
+      <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4">
         <input
           type="text"
           placeholder="Search cards..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={`flex-1 px-3 py-1.5 sm:py-2 rounded-lg border ${
+          className={`flex-1 px-4 py-2 rounded-lg border ${
             darkMode 
               ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
               : 'bg-white border-gray-300 text-gray-700 placeholder-gray-400'
-          } text-sm sm:text-base`}
+          } text-base`}
         />
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as any)}
-          className={`px-3 py-1.5 sm:py-2 rounded-lg border ${
+          className={`px-4 py-2 rounded-lg border ${
             darkMode 
               ? 'bg-gray-800 border-gray-700 text-white' 
               : 'bg-white border-gray-300 text-gray-700'
-          } text-sm sm:text-base`}
+          } text-base min-w-[140px]`}
         >
           <option value="all">All Cards</option>
           <option value="favorites">Favorites</option>
@@ -697,11 +692,11 @@ export const FlashcardDeck = ({
       </div>
 
       {/* Progress bar */}
-      <div className="w-full max-w-2xl flex items-center gap-2 text-xs sm:text-sm">
-        <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
+      <div className="w-full flex items-center gap-3">
+        <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           {currentIndex + 1} / {currentCards.length}
         </span>
-        <div className="flex-1 h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div 
             className="h-full bg-blue-500"
             style={{ width: `${((currentIndex + 1) / currentCards.length) * 100}%` }}
@@ -710,7 +705,7 @@ export const FlashcardDeck = ({
       </div>
 
       {/* Current card */}
-      <div className="w-full max-w-2xl">
+      <div className="w-full aspect-[3/2] min-h-[300px] sm:min-h-[400px]">
         <Flashcard
           front={currentCards[currentIndex].front}
           back={currentCards[currentIndex].back}
@@ -724,28 +719,28 @@ export const FlashcardDeck = ({
       </div>
 
       {/* Navigation buttons */}
-      <div className="w-full max-w-2xl flex justify-between items-center mt-2 sm:mt-4">
+      <div className="w-full flex justify-between items-center mt-4">
         <button
           onClick={handlePrevious}
-          className={`px-3 sm:px-4 py-1.5 sm:py-2 ${
+          className={`px-6 py-2.5 ${
             darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-          } rounded-lg transition-colors duration-200 text-sm sm:text-base`}
+          } rounded-lg transition-colors duration-200 text-base font-medium`}
         >
           Previous
         </button>
         <button
           onClick={() => setIsFlipped(prev => !prev)}
-          className={`px-3 sm:px-4 py-1.5 sm:py-2 ${
+          className={`px-8 py-2.5 ${
             darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-          } text-white rounded-lg transition-colors duration-200 text-sm sm:text-base`}
+          } text-white rounded-lg transition-colors duration-200 text-base font-medium`}
         >
           {isFlipped ? 'Hide Answer' : 'Show Answer'}
         </button>
         <button
           onClick={handleNext}
-          className={`px-3 sm:px-4 py-1.5 sm:py-2 ${
+          className={`px-6 py-2.5 ${
             darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-          } rounded-lg transition-colors duration-200 text-sm sm:text-base`}
+          } rounded-lg transition-colors duration-200 text-base font-medium`}
         >
           Next
         </button>
@@ -753,7 +748,7 @@ export const FlashcardDeck = ({
 
       {/* Toast notification */}
       {toastVisible && (
-        <div className="fixed top-2 sm:top-4 right-2 sm:right-4 left-2 sm:left-4 mx-auto max-w-sm p-2 sm:p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50 text-center text-sm sm:text-base">
+        <div className="fixed top-4 right-4 left-4 mx-auto max-w-sm p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50 text-center text-base">
           {toastMessage}
         </div>
       )}

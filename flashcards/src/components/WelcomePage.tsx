@@ -11,16 +11,16 @@ export const WelcomePage = ({ onCategorySelect, darkMode = false }: WelcomePageP
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
+    <div className="w-full flex flex-col items-center">
       <h2 className={`text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-8`}>Welcome to Flashcards!</h2>
       <p className={`text-xl ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-12`}>Choose a category to start learning</p>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
         {categories.map((category) => (
           <button
             key={category.id}
             onClick={() => onCategorySelect(category.id)}
-            className={`${category.color} text-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1`}
+            className={`${category.color} text-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 h-48`}
           >
             <h3 className="text-2xl font-semibold mb-4">{category.name}</h3>
             <p className="text-white/90">Start learning {category.name.toLowerCase()}</p>
