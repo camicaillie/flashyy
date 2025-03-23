@@ -202,9 +202,11 @@ export const FlashcardDeck = ({
         !reviewedCardIds.has(card.id) && card.id !== currentCard.id
       );
       
+      // Check if this was the last card to review
       if (remainingCards.length === 0) {
         // No more cards to review, show scoreboard
         setShowScoreboard(true);
+        setIsFlipped(false);
       } else {
         // Move to next card or reset index if needed
         if (currentIndex >= remainingCards.length) {
@@ -385,10 +387,10 @@ export const FlashcardDeck = ({
     }, []);
 
     return (
-      <div className="flex flex-col items-center gap-8 p-4 md:p-8">
+      <div className="flex flex-col items-center gap-6 sm:gap-8 p-4 md:p-8">
         <div className={`w-full max-w-md ${darkMode ? 'text-white bg-gray-800' : 'text-gray-700 bg-white'} px-6 py-6 rounded-xl shadow-sm text-center`}>
-          <p className="text-2xl font-bold">Review Complete! 🎉</p>
-          <div className="mt-6 space-y-4">
+          <p className="text-xl sm:text-2xl font-bold">Review Complete! 🎉</p>
+          <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
             <p className="text-lg">Your Review Results:</p>
             <div className="grid grid-cols-3 gap-2 md:gap-4">
               <div className={`${darkMode ? 'bg-green-900' : 'bg-green-100'} p-3 md:p-4 rounded-lg`}>
@@ -404,17 +406,25 @@ export const FlashcardDeck = ({
                 <p className="text-xl md:text-2xl">{reviewResults.hard}</p>
               </div>
             </div>
-            <p className="text-base md:text-lg mt-4">
+            <p className="text-base md:text-lg mt-2 sm:mt-4">
               You improved {reviewResults.easy + reviewResults.medium} out of {reviewResults.easy + reviewResults.medium + reviewResults.hard} cards!
             </p>
           </div>
         </div>
-        <button
-          onClick={handleRestart}
-          className={`px-6 py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
-        >
-          Start New Session
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <button
+            onClick={handleRestart}
+            className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+          >
+            Start New Session
+          </button>
+          <button
+            onClick={() => setShowScoreboard(false)}
+            className={`px-4 sm:px-6 py-2 sm:py-3 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-lg transition-colors duration-200 font-medium shadow-sm`}
+          >
+            Continue Browsing
+          </button>
+        </div>
       </div>
     );
   }
