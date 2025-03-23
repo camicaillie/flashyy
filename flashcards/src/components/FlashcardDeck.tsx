@@ -11,12 +11,6 @@ import {
   sortCardsByDueDate
 } from '../utils/spacedRepetition';
 
-interface FlashcardData extends FlashcardType {
-  id: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  favorite?: boolean;
-}
-
 interface FlashcardDeckProps {
   cards: FlashcardType[];
   darkMode?: boolean;

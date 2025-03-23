@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface WelcomePageProps {
   onCategorySelect: (category: string) => void;
   darkMode?: boolean;
