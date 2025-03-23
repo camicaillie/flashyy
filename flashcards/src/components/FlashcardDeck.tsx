@@ -99,6 +99,13 @@ export const FlashcardDeck = ({
     }
   }, [cards, categoryId, useSRS]);
 
+  // Ensure currentIndex stays within bounds of currentCards
+  useEffect(() => {
+    if (currentCards.length > 0 && currentIndex >= currentCards.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentCards, currentIndex]);
+
   // Handle keyboard controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -128,6 +135,9 @@ export const FlashcardDeck = ({
   }, [showReviewPrompt, showScoreboard]);
 
   const handleNext = () => {
+    // Safety check - if no cards, do nothing
+    if (currentCards.length === 0) return;
+    
     if (isReviewingHard) {
       if (currentCards.length <= 1) {
         // If we're on the last card, stay on this card
@@ -137,7 +147,7 @@ export const FlashcardDeck = ({
     }
     
     // In normal mode
-    const nextIndex = (currentIndex + 1) % currentCards.length;
+    const nextIndex = (currentIndex + 1) % Math.max(1, currentCards.length);
     if (nextIndex === 0 && !isReviewingHard && hardCards.length > 0 && filterType === 'all' && !searchQuery) {
       // Only show review prompt if we have hard cards, in normal mode, and no filters active
       setShowReviewPrompt(true);
@@ -149,7 +159,7 @@ export const FlashcardDeck = ({
 
   const handlePrevious = () => {
     if (currentCards.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + currentCards.length) % currentCards.length);
+    setCurrentIndex((prev) => (prev - 1 + currentCards.length) % Math.max(1, currentCards.length));
     setIsFlipped(false);
   };
 
@@ -280,7 +290,48 @@ export const FlashcardDeck = ({
     setIsFlipped(false);
     setReviewedCardIds(new Set());
     setReviewResults({ easy: 0, medium: 0, hard: 0 });
-    setCards(cards.map(card => ({ ...card, difficulty: undefined })));
+    setSearchQuery('');
+    setFilterType('all');
+    
+    // Reset cards to initial state but keep favorites
+    const resetCards = initialCards.map((card, index) => {
+      const existingCard = cards.find(c => c.id === index + 1);
+      return {
+        ...card,
+        id: index + 1,
+        favorite: existingCard?.favorite || false,
+        difficulty: undefined,
+        dueDate: undefined,
+        interval: undefined,
+        easeFactor: undefined,
+        repetitions: undefined,
+        lastReviewed: undefined
+      };
+    });
+    setCards(resetCards);
+    saveSRSData(categoryId, resetCards);
+  };
+  
+  // Function to clear localStorage data if something is corrupted
+  const clearStorageData = () => {
+    localStorage.removeItem(`flashcards-srs-${categoryId}`);
+    localStorage.removeItem('flashcards-study-sessions');
+    
+    // Reset to initial cards
+    const freshCards = initialCards.map((card, index) => ({
+      ...card,
+      id: index + 1
+    }));
+    setCards(freshCards);
+    
+    // Reset all state
+    setIsReviewingHard(false);
+    setCurrentIndex(0);
+    setShowReviewPrompt(false);
+    setShowScoreboard(false);
+    setIsFlipped(false);
+    setReviewedCardIds(new Set());
+    setReviewResults({ easy: 0, medium: 0, hard: 0 });
     setSearchQuery('');
     setFilterType('all');
   };
@@ -617,6 +668,15 @@ export const FlashcardDeck = ({
         className={`px-6 py-2 ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'} transition-colors duration-200`}
       >
         Restart Session
+      </button>
+      
+      {/* Reset data button */}
+      <button
+        onClick={clearStorageData}
+        className={`px-6 py-2 ${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'} transition-colors duration-200 text-sm`}
+        title="Use this if you encounter any issues with the flashcards"
+      >
+        Reset All Data
       </button>
 
       {/* Stats modal */}

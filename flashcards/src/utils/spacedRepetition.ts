@@ -127,18 +127,36 @@ export const loadSRSData = (categoryId: string, defaultCards: Flashcard[]): SRSC
     try {
       const parsedData = JSON.parse(savedData) as SRSCard[];
       
-      // Convert string dates back to Date objects
-      return parsedData.map(card => ({
-        ...card,
-        dueDate: card.dueDate ? new Date(card.dueDate) : undefined,
-        lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
-      }));
+      // Convert string dates back to Date objects and validate the data
+      const convertedData = parsedData.map(card => {
+        try {
+          // Ensure required fields exist
+          if (!card || typeof card.id !== 'number') {
+            throw new Error('Invalid card data');
+          }
+          
+          return {
+            ...card,
+            dueDate: card.dueDate ? new Date(card.dueDate) : undefined,
+            lastReviewed: card.lastReviewed ? new Date(card.lastReviewed) : undefined,
+          };
+        } catch (error) {
+          console.error('Error parsing card data:', error);
+          // Return null for any invalid card
+          return null;
+        }
+      }).filter(card => card !== null) as SRSCard[]; // Remove any invalid cards
+      
+      // If we have valid data, return it
+      if (convertedData.length > 0) {
+        return convertedData;
+      }
     } catch (error) {
       console.error('Error parsing SRS data:', error);
     }
   }
   
-  // If no saved data, return default cards with SRS fields added
+  // If no saved data or error, return default cards with SRS fields added
   return defaultCards.map((card, index) => ({
     ...card,
     id: index + 1,

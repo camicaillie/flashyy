@@ -21,6 +21,12 @@ export const Flashcard = ({
   onToggleFavorite,
   darkMode = false
 }: FlashcardProps) => {
+  // Safety check to prevent errors with undefined content
+  const safeContent = {
+    front: typeof front === 'string' ? front : 'Card content not available',
+    back: typeof back === 'string' ? back : 'Card content not available'
+  };
+
   return (
     <div className="relative">
       <div
@@ -34,7 +40,7 @@ export const Flashcard = ({
         >
           {/* Front of card */}
           <div className={`absolute w-full h-full ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 backface-hidden flex items-center justify-center`}>
-            <p className={`text-xl text-center font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{front}</p>
+            <p className={`text-xl text-center font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{safeContent.front}</p>
             
             {/* Favorite button (front) */}
             <button 
@@ -57,8 +63,8 @@ export const Flashcard = ({
           </div>
           
           {/* Back of card */}
-          <div className={`absolute w-full h-full ${darkMode ? 'bg-blue-900' : 'bg-blue-50'} rounded-xl shadow-lg p-6 backface-hidden rotate-y-180 flex items-center justify-center`}>
-            <p className={`text-xl text-center font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{back}</p>
+          <div className={`absolute w-full h-full ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg p-6 backface-hidden rotate-y-180 flex flex-col`}>
+            <p className={`text-lg text-center font-medium mb-auto ${darkMode ? 'text-white' : 'text-gray-800'}`}>{safeContent.back}</p>
             
             {/* Favorite button (back) */}
             <button 
